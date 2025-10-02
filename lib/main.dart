@@ -1,9 +1,9 @@
-
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_coin_clicker/models/floating_animation.dart';
 import 'package:flutter_coin_clicker/widgets/animation_painter.dart';
 import 'package:flutter_coin_clicker/widgets/coin_display.dart';
+import 'package:flutter_coin_clicker/widgets/game_menu_sheet.dart';
 
 void main() {
   runApp(const MyApp());
@@ -49,14 +49,8 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1), // Duration doesn't matter as much here
-    )..addListener(() {
-        // Clean up old animations
-        final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
-        _animations.removeWhere((anim) => (currentTime - anim.creationTime) > 1000);
-        setState(() {});
-      });
-    _controller.repeat();
+      duration: const Duration(seconds: 1),
+    )..repeat();
   }
 
   @override
@@ -100,6 +94,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     final horizontalOffset = (_random.nextDouble() - 0.5) * 80;
     final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
 
+    // Add to list and trigger a rebuild of the AnimatedBuilder
     setState(() {
       _animations.add(FloatingAnimation(
         id: id,
@@ -110,9 +105,24 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     });
   }
 
+  void _showGameMenu() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Menu'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: const GameMenuSheet(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Coin Clicker'),
@@ -122,6 +132,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
         child: Stack(
           key: _stackKey,
           children: [
+            // Static UI that doesn't rebuild on every frame
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -139,12 +150,28 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
                 ],
               ),
             ),
-            CustomPaint(
-              painter: AnimationPainter(animations: _animations, time: currentTime),
-              child: Container(),
+            // The animation painter, rebuilt by AnimatedBuilder for performance
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
+                _animations.removeWhere((anim) => (currentTime - anim.creationTime) > 1000);
+
+                return CustomPaint(
+                  painter: AnimationPainter(animations: _animations, time: currentTime),
+                  child: Container(),
+                );
+              },
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showGameMenu,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.menu),
       ),
     );
   }
