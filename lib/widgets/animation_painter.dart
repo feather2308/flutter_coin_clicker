@@ -24,46 +24,42 @@ class AnimationPainter extends CustomPainter {
       final opacity = 1.0 - progress;
       if (opacity <= 0) continue;
 
-      // Define the text style for measurement
+      final animationText = '+${animation.amount}';      // Define the text style for measurement
       const coinStyle = TextStyle(color: Colors.amber, fontSize: 24);
       final plusOneStyle = TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.black.withOpacity(opacity),
-      );
-
-      // Layout coin text to get its width
-      _textPainter.text = const TextSpan(text: '💰', style: coinStyle);
-      _textPainter.layout();
-      final coinWidth = _textPainter.width;
-
-      // Layout +1 text to get its width
-      _textPainter.text = TextSpan(text: '+1', style: plusOneStyle);
-      _textPainter.layout();
-      final plusOneWidth = _textPainter.width;
-      final textHeight = _textPainter.height;
-
-      // Calculate the total width of the animation element
-      const spacing = 4.0;
-      final totalWidth = coinWidth + spacing + plusOneWidth;
-
-      // Calculate the centered starting position
-      final initialX = animation.position.dx - (totalWidth / 2);
-      final initialY = animation.position.dy - (textHeight / 2);
-
-      // Calculate current position based on progress
-      final currentX = initialX + (animation.horizontalOffset * progress);
-      final currentY = initialY - (progress * 150);
-
-      // Draw coin icon
-      _textPainter.text = TextSpan(style: coinStyle.copyWith(color: coinStyle.color?.withOpacity(opacity)), text: '💰');
-      _textPainter.layout();
-      _textPainter.paint(canvas, Offset(currentX, currentY));
-
-      // Draw +1 text
-      _textPainter.text = TextSpan(text: '+1', style: plusOneStyle);
-      _textPainter.layout();
-      _textPainter.paint(canvas, Offset(currentX + coinWidth + spacing, currentY));
+       fontSize: 20,
+       fontWeight: FontWeight.bold,
+       color: Colors.black.withOpacity(opacity),
+       );      // Layout coin text to get its width
+             _textPainter.text = const TextSpan(text: '💰', style: coinStyle);
+                   _textPainter.layout();
+                         final coinWidth = _textPainter.width;
+                         
+                               // Layout +1 text to get its width
+                               _textPainter.text = TextSpan(text: animationText, style: plusOneStyle);
+                               _textPainter.layout();
+                               final plusOneWidth = _textPainter.width;
+                               final textHeight = _textPainter.height;  // Calculate the total width of the animation element
+                               const spacing = 4.0;
+                               final totalWidth = coinWidth + spacing + plusOneWidth;
+                               
+                               // Calculate the centered starting position
+                               final initialX = animation.position.dx - (totalWidth / 2);
+                               final initialY = animation.position.dy - (textHeight / 2);
+                               
+                               // Calculate current position based on progress
+                               final currentX = initialX + (animation.horizontalOffset * progress);
+                               final currentY = initialY - (progress * 150);
+                               
+          // Draw coin icon
+          _textPainter.text = TextSpan(style: coinStyle.copyWith(color: coinStyle.color?.withOpacity(opacity)), text: '💰');
+              _textPainter.layout();
+                    _textPainter.paint(canvas, Offset(currentX, currentY));
+                    
+                          // Draw +1 text
+                                _textPainter.text = TextSpan(text: animationText, style: plusOneStyle);
+                                      _textPainter.layout();
+                                            _textPainter.paint(canvas, Offset(currentX + coinWidth + spacing, currentY));
     }
   }
 
