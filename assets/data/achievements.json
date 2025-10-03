@@ -1,0 +1,107 @@
+[
+  {
+    "name": "신입 광부",
+    "description": "총 1,000 코인 획득",
+    "tier": "brass",
+    "type": "totalCoins",
+    "condition": 1000
+  },
+  {
+    "name": "숙련된 광부",
+    "description": "총 10,000 코인 획득",
+    "tier": "silver",
+    "type": "totalCoins",
+    "condition": 10000
+  },
+  {
+    "name": "베테랑 광부",
+    "description": "총 100,000 코인 획득",
+    "tier": "gold",
+    "type": "totalCoins",
+    "condition": 100000
+  },
+  {
+    "name": "광산의 지배자",
+    "description": "총 1,000,000 코인 획득",
+    "tier": "platinum",
+    "type": "totalCoins",
+    "condition": 1000000
+  },
+  {
+    "name": "코인 신",
+    "description": "총 10,000,000 코인 획득",
+    "tier": "diamond",
+    "type": "totalCoins",
+    "condition": 10000000
+  },
+  {
+    "name": "손가락 강화",
+    "description": "클릭 파워 10 달성",
+    "tier": "brass",
+    "type": "clickLevel",
+    "condition": 10
+  },
+  {
+    "name": "주먹왕",
+    "description": "클릭 파워 25 달성",
+    "tier": "silver",
+    "type": "clickLevel",
+    "condition": 25
+  },
+  {
+    "name": "핵주먹",
+    "description": "클릭 파워 50 달성",
+    "tier": "gold",
+    "type": "clickLevel",
+    "condition": 50
+  },
+  {
+    "name": "신과 같은 손",
+    "description": "클릭 파워 100 달성",
+    "tier": "platinum",
+    "type": "clickLevel",
+    "condition": 100
+  },
+  {
+    "name": "원펀맨",
+    "description": "클릭 파워 200 달성",
+    "tier": "diamond",
+    "type": "clickLevel",
+    "condition": 200
+  },
+  {
+    "name": "자동화 시작",
+    "description": "총 자동생산기 레벨 10 달성",
+    "tier": "brass",
+    "type": "autoMinerLevel",
+    "condition": 10
+  },
+  {
+    "name": "기계 군단",
+    "description": "총 자동생산기 레벨 50 달성",
+    "tier": "silver",
+    "type": "autoMinerLevel",
+    "condition": 50
+  },
+  {
+    "name": "기계 제국",
+    "description": "총 자동생산기 레벨 100 달성",
+    "tier": "gold",
+    "type": "autoMinerLevel",
+    "condition": 100
+  },
+  {
+    "name": "기계 행성",
+    "description": "총 자동생산기 레벨 250 달성",
+    "tier": "platinum",
+    "type": "autoMinerLevel",
+    "condition": 250
+  },
+  {
+    "name": "기계 신",
+    "description": "총 자동생산기 레벨 500 달성",
+    "tier": "diamond",
+    "type": "autoMinerLevel",
+    "condition": 500
+  }
+]

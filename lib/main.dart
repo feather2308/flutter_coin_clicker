@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_coin_clicker/models/achievement.dart';
+import 'package:flutter_coin_clicker/models/auto_miner.dart';
 import 'package:flutter_coin_clicker/models/floating_animation.dart';
 import 'package:flutter_coin_clicker/widgets/achievement_menu.dart';
 import 'package:flutter_coin_clicker/widgets/animation_painter.dart';
@@ -39,6 +42,7 @@ class CoinClickerPage extends StatefulWidget {
 }
 
 class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderStateMixin {
+  bool _isLoading = true;
   int _coinCount = 0;
   double _coinSize = 200.0;
   final List<FloatingAnimation> _animations = [];
@@ -53,9 +57,8 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
   // Upgrade state
   int _clickPower = 1;
   int _clickUpgradeCost = 10;
-  int _autoMinerLevel = 0;
-  int _autoMinerCost = 50;
-  int _autoMinerProduction = 0;
+  List<AutoMiner> _autoMiners = [];
+  int _totalAutoMinerProduction = 0;
   Timer? _autoMinerTimer;
 
   // Achievement state
@@ -65,21 +68,35 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    _initializeAchievements();
+    _loadGameData();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat();
   }
 
-  void _initializeAchievements() {
-    _achievements = [
-      Achievement(name: '신입 광부', description: '총 1,000 코인 획득', tier: AchievementTier.brass, condition: 1000),
-      Achievement(name: '숙련된 광부', description: '총 10,000 코인 획득', tier: AchievementTier.silver, condition: 10000),
-      Achievement(name: '베테랑 광부', description: '총 100,000 코인 획득', tier: AchievementTier.gold, condition: 100000),
-      Achievement(name: '광산의 지배자', description: '총 1,000,000 코인 획득', tier: AchievementTier.platinum, condition: 1000000),
-      Achievement(name: '코인 신', description: '총 10,000,000 코인 획득', tier: AchievementTier.diamond, condition: 10000000),
-    ];
+  Future<void> _loadGameData() async {
+    await _initializeAutoMiners();
+    await _initializeAchievements();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _initializeAutoMiners() async {
+    final String response = await rootBundle.loadString('assets/data/auto_miners.json');
+    final data = await json.decode(response) as List;
+    setState(() {
+      _autoMiners = data.map((d) => AutoMiner.fromJson(d)).toList();
+    });
+  }
+
+  Future<void> _initializeAchievements() async {
+    final String response = await rootBundle.loadString('assets/data/achievements.json');
+    final data = await json.decode(response) as List;
+    setState(() {
+      _achievements = data.map((d) => Achievement.fromJson(d)).toList();
+    });
   }
 
   @override
@@ -91,11 +108,26 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
 
   void _checkAchievements() {
     for (var achievement in _achievements) {
-      if (!achievement.isUnlocked && _totalCoinsEarned >= achievement.condition) {
+      if (achievement.isUnlocked) continue;
+
+      bool unlocked = false;
+      switch (achievement.type) {
+        case AchievementType.totalCoins:
+          if (_totalCoinsEarned >= achievement.condition) unlocked = true;
+          break;
+        case AchievementType.clickLevel:
+          if (_clickPower >= achievement.condition) unlocked = true;
+          break;
+        case AchievementType.autoMinerLevel:
+          final totalLevel = _autoMiners.fold<int>(0, (sum, miner) => sum + miner.level);
+          if (totalLevel >= achievement.condition) unlocked = true;
+          break;
+      }
+
+      if (unlocked) {
         setState(() {
           achievement.isUnlocked = true;
         });
-        // Optional: Show a notification for unlocked achievement
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: achievement.color,
@@ -162,10 +194,10 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
   }
 
   void _autoMine() {
-    if (_autoMinerProduction > 0) {
+    if (_totalAutoMinerProduction > 0) {
       setState(() {
-        _coinCount += _autoMinerProduction;
-        _totalCoinsEarned += _autoMinerProduction;
+        _coinCount += _totalAutoMinerProduction;
+        _totalCoinsEarned += _totalAutoMinerProduction;
       });
       _addAutoMineAnimation();
       _checkAchievements();
@@ -181,7 +213,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     final autoMinerPosition = autoMinerRenderBox.localToGlobal(Offset.zero);
     final localPosition = stackRenderBox.globalToLocal(autoMinerPosition);
 
-    _addAnimation(Offset(localPosition.dx + autoMinerRenderBox.size.width / 2, localPosition.dy), _autoMinerProduction);
+    _addAnimation(Offset(localPosition.dx + autoMinerRenderBox.size.width / 2, localPosition.dy), _totalAutoMinerProduction);
   }
 
   void _startAutoMiner() {
@@ -191,6 +223,10 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     });
   }
 
+  void _recalculateTotalProduction() {
+    _totalAutoMinerProduction = _autoMiners.fold(0, (sum, miner) => sum + miner.currentProduction);
+  }
+
   void _upgradeClickPower(StateSetter setDialogState) {
     if (_coinCount >= _clickUpgradeCost) {
       setState(() {
@@ -198,21 +234,23 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
         _clickPower++;
         _clickUpgradeCost = (_clickUpgradeCost * 1.5).round();
       });
+      _checkAchievements();
       setDialogState(() {});
     }
   }
 
-  void _upgradeAutoMiner(StateSetter setDialogState) {
-    if (_coinCount >= _autoMinerCost) {
+  void _upgradeAutoMiner(int index, StateSetter setDialogState) {
+    final miner = _autoMiners[index];
+    if (_coinCount >= miner.currentCost) {
       setState(() {
-        _coinCount -= _autoMinerCost;
-        _autoMinerLevel++;
-        _autoMinerProduction = _autoMinerLevel;
-        _autoMinerCost = (_autoMinerCost * 1.8).round();
+        _coinCount -= miner.currentCost;
+        miner.levelUp();
+        _recalculateTotalProduction();
       });
       if (_autoMinerTimer == null || !_autoMinerTimer!.isActive) {
         _startAutoMiner();
       }
+      _checkAchievements();
       setDialogState(() {});
     }
   }
@@ -261,12 +299,13 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: const Text('자동 생산기'),
-              content: AutoMinerUpgradeMenu(
-                coinCount: _coinCount,
-                autoMinerLevel: _autoMinerLevel,
-                autoMinerCost: _autoMinerCost,
-                autoMinerProduction: _autoMinerProduction,
-                onUpgradeAutoMiner: () => _upgradeAutoMiner(setDialogState),
+              content: SizedBox(
+                height: 400, // Constrain height for the ListView
+                child: AutoMinerUpgradeMenu(
+                  coinCount: _coinCount,
+                  autoMiners: _autoMiners,
+                  onUpgradeAutoMiner: (index) => _upgradeAutoMiner(index, setDialogState),
+                ),
               ),
             );
           },
@@ -301,63 +340,67 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
       appBar: AppBar(
         title: const Text('Coin Clicker'),
       ),
-      body: GestureDetector(
-        onTapDown: _handleTap,
-        child: Stack(
-          key: _stackKey,
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Text(
-                    'Coins:',
-                    style: TextStyle(fontSize: 24),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : GestureDetector(
+              onTapDown: _handleTap,
+              child: Stack(
+                key: _stackKey,
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        const Text(
+                          'Coins:',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                        Text(
+                          '$_coinCount',
+                          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 40),
+                        CoinDisplay(coinKey: _coinKey, coinSize: _coinSize),
+                      ],
+                    ),
                   ),
-                  Text(
-                    '$_coinCount',
-                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
+                      _animations.removeWhere((anim) => (currentTime - anim.creationTime) > 1000);
+
+                      return CustomPaint(
+                        painter: AnimationPainter(animations: _animations, time: currentTime),
+                        child: Container(),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 40),
-                  CoinDisplay(coinKey: _coinKey, coinSize: _coinSize),
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    child: Visibility(
+                      visible: _autoMiners.any((miner) => miner.level > 0),
+                      child: Icon(
+                        Icons.memory,
+                        key: _autoMinerKey,
+                        size: 50,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                final currentTime = _controller.lastElapsedDuration?.inMilliseconds.toDouble() ?? 0;
-                _animations.removeWhere((anim) => (currentTime - anim.creationTime) > 1000);
-
-                return CustomPaint(
-                  painter: AnimationPainter(animations: _animations, time: currentTime),
-                  child: Container(),
-                );
-              },
-            ),
-            Positioned(
-              bottom: 20,
-              left: 20,
-              child: Visibility(
-                visible: _autoMinerLevel > 0,
-                child: Icon(
-                  Icons.memory,
-                  key: _autoMinerKey,
-                  size: 50,
-                  color: Colors.blueGrey,
-                ),
+      floatingActionButton: _isLoading
+          ? null
+          : FloatingActionButton(
+              onPressed: _showGameMenu,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: const Icon(Icons.menu),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showGameMenu,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.menu),
-      ),
     );
   }
 }

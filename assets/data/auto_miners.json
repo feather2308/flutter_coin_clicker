@@ -1,0 +1,72 @@
+[
+  {
+    "name": "마우스",
+    "icon": "mouse",
+    "baseProduction": 1,
+    "baseCost": 50,
+    "costIncreaseRate": 1.15
+  },
+  {
+    "name": "키보드",
+    "icon": "keyboard",
+    "baseProduction": 5,
+    "baseCost": 250,
+    "costIncreaseRate": 1.18
+  },
+  {
+    "name": "매크로",
+    "icon": "code",
+    "baseProduction": 10,
+    "baseCost": 1000,
+    "costIncreaseRate": 1.20
+  },
+  {
+    "name": "자동 농장",
+    "icon": "agriculture",
+    "baseProduction": 25,
+    "baseCost": 5000,
+    "costIncreaseRate": 1.22
+  },
+  {
+    "name": "코인 공장",
+    "icon": "factory",
+    "baseProduction": 50,
+    "baseCost": 20000,
+    "costIncreaseRate": 1.25
+  },
+  {
+    "name": "은행",
+    "icon": "account_balance",
+    "baseProduction": 100,
+    "baseCost": 100000,
+    "costIncreaseRate": 1.28
+  },
+  {
+    "name": "우주선",
+    "icon": "rocket_launch",
+    "baseProduction": 500,
+    "baseCost": 500000,
+    "costIncreaseRate": 1.30
+  },
+  {
+    "name": "행성 채굴기",
+    "icon": "public",
+    "baseProduction": 1000,
+    "baseCost": 2000000,
+    "costIncreaseRate": 1.32
+  },
+  {
+    "name": "차원문",
+    "icon": "circle_notifications",
+    "baseProduction": 5000,
+    "baseCost": 10000000,
+    "costIncreaseRate": 1.35
+  },
+  {
+    "name": "타임머신",
+    "icon": "history_toggle_off",
+    "baseProduction": 10000,
+    "baseCost": 50000000,
+    "costIncreaseRate": 1.40
+  }
+]
