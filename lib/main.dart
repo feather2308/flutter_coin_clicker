@@ -6,8 +6,10 @@ import 'package:flutter_coin_clicker/game_ui.dart';
 import 'package:flutter_coin_clicker/models/floating_animation.dart';
 import 'package:flutter_coin_clicker/widgets/animation_painter.dart';
 import 'package:flutter_coin_clicker/widgets/coin_display.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  await Hive.initFlutter();
   runApp(const MyApp());
 }
 
@@ -35,7 +37,7 @@ class CoinClickerPage extends StatefulWidget {
   State<CoinClickerPage> createState() => _CoinClickerPageState();
 }
 
-class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderStateMixin {
+class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderStateMixin, WidgetsBindingObserver {
   late final GameLogic _gameLogic;
   late final GameUI _gameUI;
   bool _isLoading = true;
@@ -53,6 +55,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _gameLogic = GameLogic(onUpdate: () => setState(() {}), onAutoMine: _addAutoMineAnimation, context: context);
     _gameUI = GameUI(context: context, gameLogic: _gameLogic);
     _loadData();
@@ -61,6 +64,15 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 앱이 비활성화되거나 일시정지될 때 데이터 저장
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _gameLogic.saveGameData();
+    }
   }
 
   void _loadData() async {
@@ -76,6 +88,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _gameLogic.dispose();
     super.dispose();

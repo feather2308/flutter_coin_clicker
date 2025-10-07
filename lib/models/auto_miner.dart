@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'dart:math';
 
@@ -67,5 +66,9 @@ class AutoMiner {
 
   void levelUp() {
     level++;
+  }
+
+  void setLevel(int newLevel) {
+    level = newLevel;
   }
 }
