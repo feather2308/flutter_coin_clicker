@@ -77,8 +77,3 @@
 - 데이터 구조는 JSON 기반으로 관리 (`artifact_id`, `name`, `tier`, `effect`, `isActive`)  
 - 시각효과용 애니메이션은 Flutter의 `AnimatedContainer`, `Lottie`, `Rive` 활용 예정  
 - 향후 서버 연동 시, 아티팩트 획득/저장/활성화 정보는 클라우드에 동기화  
-
----
-
-## 📂 관련 문서
-- [메인 README로 돌아가기](./README.md)
