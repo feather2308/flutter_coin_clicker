@@ -1,0 +1,26 @@
+[
+  {
+    "id": "default",
+    "name": "기본",
+    "color": "0xFFFFFF00",
+    "price": 0
+  },
+  {
+    "id": "ruby",
+    "name": "루비",
+    "color": "0xFFFF0000",
+    "price": 10000
+  },
+  {
+    "id": "emerald",
+    "name": "에메랄드",
+    "color": "0xFF00FF00",
+    "price": 10000
+  },
+  {
+    "id": "sapphire",
+    "name": "사파이어",
+    "color": "0xFF0000FF",
+    "price": 10000
+  }
+]

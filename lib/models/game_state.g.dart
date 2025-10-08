@@ -19,20 +19,35 @@ class GameStateAdapter extends TypeAdapter<GameState> {
     return GameState(
       coins: fields[0] as double,
       clickPower: fields[1] as int,
-      autoMinerLevel: fields[2] as int,
+      autoMinerLevels: (fields[2] as List?)?.cast<int>(),
+      unlockedCoinThemeIds: (fields[3] as List?)?.cast<String>(),
+      activeCoinThemeId: fields[4] as String,
+      isArtifactExpeditionUnlocked: fields[5] as bool,
+      totalCoinsEarned: fields[6] as double,
+      clickUpgradeCost: fields[7] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, GameState obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.coins)
       ..writeByte(1)
       ..write(obj.clickPower)
       ..writeByte(2)
-      ..write(obj.autoMinerLevel);
+      ..write(obj.autoMinerLevels)
+      ..writeByte(3)
+      ..write(obj.unlockedCoinThemeIds)
+      ..writeByte(4)
+      ..write(obj.activeCoinThemeId)
+      ..writeByte(5)
+      ..write(obj.isArtifactExpeditionUnlocked)
+      ..writeByte(6)
+      ..write(obj.totalCoinsEarned)
+      ..writeByte(7)
+      ..write(obj.clickUpgradeCost);
   }
 
   @override

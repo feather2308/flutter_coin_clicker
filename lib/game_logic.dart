@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_coin_clicker/models/achievement.dart';
 import 'package:flutter_coin_clicker/models/auto_miner.dart';
+import 'package:flutter_coin_clicker/models/coin_theme.dart';
+import 'package:flutter_coin_clicker/models/game_state.dart';
 import 'package:hive/hive.dart';
 
 class GameLogic {
@@ -12,21 +14,14 @@ class GameLogic {
   final VoidCallback onAutoMine;
   final BuildContext context;
 
-  int coinCount = 0;
-  int totalCoinsEarned = 0;
+  late GameState gameState;
 
-  // Upgrades
-  int clickPower = 1;
-  int clickUpgradeCost = 10;
+  // Non-persistent state
   List<AutoMiner> autoMiners = [];
+  List<CoinTheme> coinThemes = [];
   int totalAutoMinerProduction = 0;
   Timer? autoMinerTimer;
-
-  // Achievements
   List<Achievement> achievements = [];
-
-  // Artifact Expedition (formerly Idle Rewards)
-  bool isArtifactExpeditionUnlocked = false;
   final int artifactExpeditionUnlockCost = 1000;
 
   GameLogic({required this.onUpdate, required this.onAutoMine, required this.context});
@@ -34,38 +29,41 @@ class GameLogic {
   // --- Data Persistence ---
 
   Future<void> saveGameData() async {
-    final box = await Hive.openBox('gameState');
-    await box.put('coinCount', coinCount);
-    await box.put('totalCoinsEarned', totalCoinsEarned);
-    await box.put('clickPower', clickPower);
-    await box.put('clickUpgradeCost', clickUpgradeCost);
-    final minerLevels = autoMiners.map((m) => m.level).toList();
-    await box.put('autoMinerLevels', minerLevels);
+    final box = await Hive.openBox('gameStateBox');
+
+    // 게임 상태 전체 저장
+    await box.put('gameState', gameState);
+
+    // 도전과제 상태 저장
     final achievementStatus = achievements.map((a) => a.isUnlocked).toList();
     await box.put('achievementStatus', achievementStatus);
-    await box.put('isArtifactExpeditionUnlocked', isArtifactExpeditionUnlocked);
+
+    // 🎨 테마 상태 저장 (별도로 안 해도 되지만, 명시적으로 한 번 더)
+    await box.put('unlockedCoinThemeIds', gameState.unlockedCoinThemeIds);
+    await box.put('activeCoinThemeId', gameState.activeCoinThemeId);
+
+    // 세션 종료 시간
     await box.put('lastSessionEndTime', DateTime.now().millisecondsSinceEpoch);
   }
 
   Future<void> loadGameData() async {
     await _initializeAutoMiners();
     await _initializeAchievements();
+    await _initializeCoinThemes();
 
-    final box = await Hive.openBox('gameState');
+    final box = await Hive.openBox('gameStateBox');
 
-    coinCount = box.get('coinCount', defaultValue: 0);
-    totalCoinsEarned = box.get('totalCoinsEarned', defaultValue: 0);
-    clickPower = box.get('clickPower', defaultValue: 1);
-    clickUpgradeCost = box.get('clickUpgradeCost', defaultValue: 10);
-    isArtifactExpeditionUnlocked = box.get('isArtifactExpeditionUnlocked', defaultValue: false);
+    // 기본 게임 상태 불러오기
+    gameState = box.get('gameState', defaultValue: GameState());
 
-    final List<int> minerLevels = List<int>.from(box.get('autoMinerLevels', defaultValue: []));
-    if (minerLevels.isNotEmpty && minerLevels.length == autoMiners.length) {
+    // 자동 생산기 복원
+    if (gameState.autoMinerLevels.isNotEmpty && gameState.autoMinerLevels.length == autoMiners.length) {
       for (int i = 0; i < autoMiners.length; i++) {
-        autoMiners[i].setLevel(minerLevels[i]);
+        autoMiners[i].setLevel(gameState.autoMinerLevels[i]);
       }
     }
 
+    // 도전과제 복원
     final List<bool> achievementStatus = List<bool>.from(box.get('achievementStatus', defaultValue: []));
     if (achievementStatus.isNotEmpty && achievementStatus.length == achievements.length) {
       for (int i = 0; i < achievements.length; i++) {
@@ -73,8 +71,18 @@ class GameLogic {
       }
     }
 
+    // 🎨 테마 상태 복원
+    final List<String> unlockedIds = List<String>.from(
+      box.get('unlockedCoinThemeIds', defaultValue: ['default']),
+    );
+    final String activeId = box.get('activeCoinThemeId', defaultValue: 'default');
+
+    gameState.unlockedCoinThemeIds = unlockedIds;
+    gameState.activeCoinThemeId = activeId;
+
+    // 생산량 갱신 및 기타 초기화
     _recalculateTotalProduction();
-    if (isArtifactExpeditionUnlocked) {
+    if (gameState.isArtifactExpeditionUnlocked) {
       _calculateArtifactExpeditionRewards(box);
     }
 
@@ -96,8 +104,8 @@ class GameLogic {
     final earnings = (effectiveOfflineSeconds * totalAutoMinerProduction).round();
 
     if (earnings > 0) {
-      coinCount += earnings;
-      totalCoinsEarned += earnings;
+      gameState.coins += earnings;
+      gameState.totalCoinsEarned += earnings;
       _showArtifactExpeditionDialog(earnings, effectiveOfflineSeconds.round());
     }
   }
@@ -136,14 +144,19 @@ class GameLogic {
     achievements = data.map((d) => Achievement.fromJson(d)).toList();
   }
 
+  Future<void> _initializeCoinThemes() async {
+    final String response = await rootBundle.loadString('assets/data/coin_themes.json');
+    final data = await json.decode(response) as List;
+    coinThemes = data.map((d) => CoinTheme.fromJson(d)).toList();
+  }
+
   // --- Core Game Logic ---
   void unlockArtifactExpedition() {
-    if (coinCount >= artifactExpeditionUnlockCost) {
-      coinCount -= artifactExpeditionUnlockCost;
-      isArtifactExpeditionUnlocked = true;
+    if (gameState.coins >= artifactExpeditionUnlockCost) {
+      gameState.coins -= artifactExpeditionUnlockCost;
+      gameState.isArtifactExpeditionUnlocked = true;
       onUpdate();
       saveGameData();
-      // Close menu and show confirmation
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('유물 탐사 기능이 활성화되었습니다!')), 
@@ -152,9 +165,9 @@ class GameLogic {
   }
 
   void incrementCoin() {
-    final amount = clickPower;
-    coinCount += amount;
-    totalCoinsEarned += amount;
+    final amount = gameState.clickPower;
+    gameState.coins += amount;
+    gameState.totalCoinsEarned += amount;
     _checkAchievements();
     onUpdate();
     saveGameData();
@@ -162,8 +175,8 @@ class GameLogic {
 
   void autoMine() {
     if (totalAutoMinerProduction > 0) {
-      coinCount += totalAutoMinerProduction;
-      totalCoinsEarned += totalAutoMinerProduction;
+      gameState.coins += totalAutoMinerProduction;
+      gameState.totalCoinsEarned += totalAutoMinerProduction;
       _checkAchievements();
       onUpdate();
       onAutoMine();
@@ -180,10 +193,10 @@ class GameLogic {
   }
 
   void upgradeClickPower() {
-    if (coinCount >= clickUpgradeCost) {
-      coinCount -= clickUpgradeCost;
-      clickPower++;
-      clickUpgradeCost = (clickUpgradeCost * 1.5).round();
+    if (gameState.coins >= gameState.clickUpgradeCost) {
+      gameState.coins -= gameState.clickUpgradeCost;
+      gameState.clickPower++;
+      gameState.clickUpgradeCost = (gameState.clickUpgradeCost * 1.5).round().toDouble();
       _checkAchievements();
       onUpdate();
       saveGameData();
@@ -192,9 +205,10 @@ class GameLogic {
 
   void upgradeAutoMiner(int index) {
     final miner = autoMiners[index];
-    if (coinCount >= miner.currentCost) {
-      coinCount -= miner.currentCost;
+    if (gameState.coins >= miner.currentCost) {
+      gameState.coins -= miner.currentCost;
       miner.levelUp();
+      gameState.autoMinerLevels = autoMiners.map((m) => m.level).toList();
       _recalculateTotalProduction();
       if (autoMinerTimer == null || !autoMinerTimer!.isActive) startAutoMiner();
       _checkAchievements();
@@ -208,8 +222,8 @@ class GameLogic {
       if (achievement.isUnlocked) continue;
       bool unlocked = false;
       switch (achievement.type) {
-        case AchievementType.totalCoins: if (totalCoinsEarned >= achievement.condition) unlocked = true; break;
-        case AchievementType.clickLevel: if (clickPower >= achievement.condition) unlocked = true; break;
+        case AchievementType.totalCoins: if (gameState.totalCoinsEarned >= achievement.condition) unlocked = true; break;
+        case AchievementType.clickLevel: if (gameState.clickPower >= achievement.condition) unlocked = true; break;
         case AchievementType.autoMinerLevel: final totalLevel = autoMiners.fold<int>(0, (sum, miner) => sum + miner.level); if (totalLevel >= achievement.condition) unlocked = true; break;
       }
       if (unlocked) {
@@ -229,4 +243,5 @@ class GameLogic {
   void dispose() {
     autoMinerTimer?.cancel();
   }
+
 }

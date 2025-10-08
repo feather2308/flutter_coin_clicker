@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_coin_clicker/game_logic.dart';
 import 'package:flutter_coin_clicker/game_ui.dart';
 import 'package:flutter_coin_clicker/models/floating_animation.dart';
+import 'package:flutter_coin_clicker/models/game_state.dart';
 import 'package:flutter_coin_clicker/widgets/animation_painter.dart';
 import 'package:flutter_coin_clicker/widgets/coin_display.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
   await Hive.initFlutter();
+  Hive.registerAdapter(GameStateAdapter());
   runApp(const MyApp());
 }
 
@@ -123,7 +125,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
     if (coinRect.contains(details.globalPosition)) {
       final localPosition = stackRenderBox.globalToLocal(details.globalPosition);
       _gameLogic.incrementCoin();
-      _addAnimation(localPosition, _gameLogic.clickPower);
+      _addAnimation(localPosition, _gameLogic.gameState.clickPower);
       _triggerCoinAnimation();
     }
   }
@@ -179,7 +181,7 @@ class _CoinClickerPageState extends State<CoinClickerPage> with TickerProviderSt
                           style: TextStyle(fontSize: 24),
                         ),
                         Text(
-                          '${_gameLogic.coinCount}',
+                          '${_gameLogic.gameState.coins.round()}',
                           style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 40),

@@ -4,6 +4,7 @@ import 'package:flutter_coin_clicker/widgets/achievement_menu.dart';
 import 'package:flutter_coin_clicker/widgets/auto_miner_upgrade_menu.dart';
 import 'package:flutter_coin_clicker/widgets/click_upgrade_menu.dart';
 import 'package:flutter_coin_clicker/widgets/game_menu_sheet.dart';
+import 'package:flutter_coin_clicker/widgets/theme_menu.dart';
 
 class GameUI {
   final BuildContext context;
@@ -24,15 +25,64 @@ class GameUI {
               onAchievementsPressed: showAchievementsMenu,
               onClickUpgradePressed: showClickUpgradeMenu,
               onAutoMinerUpgradePressed: showAutoMinerUpgradeMenu,
-              onFeatureShopPressed: gameLogic.isArtifactExpeditionUnlocked
+              onThemeShopPressed: showThemeShop,
+              onFeatureShopPressed: gameLogic.gameState.isArtifactExpeditionUnlocked
                   ? showArtifactExpeditionUpgradeMenu
                   : showFeatureShop,
-              isArtifactExpeditionUnlocked: gameLogic.isArtifactExpeditionUnlocked,
+              isArtifactExpeditionUnlocked: gameLogic.gameState.isArtifactExpeditionUnlocked,
+              onSettingsPressed: showSettings,
             ),
           ),
         );
       },
     );
+  }
+
+  void showSettings() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool musicOn = true;
+        bool soundOn = true;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('설정'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: const Text('배경음악'),
+                    value: musicOn,
+                    onChanged: (v) => setState(() => musicOn = v),
+                  ),
+                  SwitchListTile(
+                    title: const Text('효과음'),
+                    value: soundOn,
+                    onChanged: (v) => setState(() => soundOn = v),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('닫기'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  void showThemeShop() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => ThemeMenu(gameLogic: gameLogic),
+    ));
   }
 
   void showFeatureShop() {
@@ -92,9 +142,9 @@ class GameUI {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: const Text('클릭 강화'),
               content: ClickUpgradeMenu(
-                coinCount: gameLogic.coinCount,
-                clickPower: gameLogic.clickPower,
-                clickUpgradeCost: gameLogic.clickUpgradeCost,
+                coinCount: gameLogic.gameState.coins.round(),
+                clickPower: gameLogic.gameState.clickPower,
+                clickUpgradeCost: gameLogic.gameState.clickUpgradeCost.round(),
                 onUpgradeClick: () {
                   gameLogic.upgradeClickPower();
                   setDialogState(() {});
@@ -119,7 +169,7 @@ class GameUI {
               content: SizedBox(
                 height: 400,
                 child: AutoMinerUpgradeMenu(
-                  coinCount: gameLogic.coinCount,
+                  coinCount: gameLogic.gameState.coins.round(),
                   autoMiners: gameLogic.autoMiners,
                   onUpgradeAutoMiner: (index) {
                     gameLogic.upgradeAutoMiner(index);
